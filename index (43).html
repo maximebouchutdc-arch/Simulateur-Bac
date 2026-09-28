@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Simulateur Bac STD2A · Bellecour École</title>
+<meta name="description" content="Calculez votre moyenne au Bac STD2A à partir de vos notes de Première et de Terminale.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #000;
+    --muted: #5f6368;
+    --line: #e3e3e3;
+    --paper: #fff;
+    --mint-soft: #c8f5e4;
+    --mint: #4fe3b3;
+    --mint-deep: #0b7a58;
+    --coral-soft: #ffddd8;
+    --coral: #ff4d3a;
+    --coral-deep: #c42a19;
+    --radius-lg: 14px;
+    --radius-sm: 7px;
+    --display: "Bricolage Grotesque", "Arial Narrow", Arial, sans-serif;
+    --body: "Instrument Sans", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  *, *::before, *::after { box-sizing: inherit; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  button, input, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+
+  .page {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 48px 32px 120px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 40px;
+    align-items: start;
+  }
+  header { grid-column: 1 / -1; max-width: 760px; }
+  h1 {
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: clamp(2.2rem, 4.5vw, 3.4rem);
+    line-height: 1.02;
+    letter-spacing: -0.02em;
+    margin: 0 0 14px;
+  }
+  .lede { color: var(--muted); font-size: 1.1rem; margin: 0; max-width: 62ch; }
+
+  .toolbar {
+    grid-column: 1 / -1;
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    margin-top: -12px;
+  }
+  .btn {
+    border: 1.5px solid var(--ink);
+    background: var(--paper);
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-weight: 600;
+    font-size: .92rem;
+    cursor: pointer;
+  }
+  .btn:hover { background: #f3f3f3; }
+  .btn[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+  .coef-total { color: var(--muted); font-size: .92rem; margin-left: auto; }
+
+  /* ---------- Grille des épreuves ---------- */
+  .board { display: grid; gap: 16px; }
+  .cols {
+    display: grid;
+    grid-template-columns: 170px 1fr 1fr;
+    gap: 16px;
+  }
+  .col-head {
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    text-align: center;
+    font-weight: 600;
+  }
+  .col-head.p { background: #e2faf1; }
+  .col-head.f { background: var(--coral-soft); color: var(--coral-deep); }
+
+  .level {
+    display: grid;
+    grid-template-columns: 170px 1fr 1fr;
+    gap: 16px;
+  }
+  .level-name {
+    border: 1.5px solid var(--line);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .level-name h2 {
+    font-family: var(--display);
+    font-size: 1.35rem; font-weight: 700; line-height: 1.15;
+    margin: 0;
+  }
+  .level-name small { color: var(--muted); margin-top: 6px; font-size: .88rem; }
+
+  .block {
+    border-radius: var(--radius-lg);
+    padding: 18px 18px 14px;
+    display: flex; flex-direction: column;
+  }
+  .block.p1 { background: var(--mint-soft); }
+  .block.f1 { background: var(--coral-soft); }
+  .block.p2 { background: var(--mint); }
+  .block.f2 { background: var(--coral); color: #fff; }
+
+  .block-title { display: none; font-weight: 600; margin: 0 0 8px; }
+
+  .row {
+    display: grid;
+    grid-template-columns: 1fr auto 76px;
+    gap: 10px;
+    align-items: center;
+    padding: 6px 0;
+  }
+  .row + .row { border-top: 1px solid rgba(0,0,0,.08); }
+  .block.f2 .row + .row { border-top-color: rgba(255,255,255,.25); }
+  .row label { font-weight: 500; }
+  .block.f2 .row label { font-weight: 600; }
+
+  .coef {
+    font-size: .8rem; font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 5px;
+    white-space: nowrap;
+    min-width: 62px; text-align: center;
+  }
+  .p1 .coef { background: var(--mint); }
+  .p2 .coef { background: #e2faf1; }
+  .f1 .coef { background: var(--coral); color: #fff; }
+  .f2 .coef { background: #fff; color: var(--ink); }
+  .coef input {
+    width: 3.2em; border: none; background: transparent;
+    font-weight: 700; text-align: center; padding: 0;
+    -moz-appearance: textfield;
+  }
+  .coef input::-webkit-outer-spin-button,
+  .coef input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .editing .coef { outline: 1.5px dashed currentColor; outline-offset: 1px; }
+
+  .note {
+    width: 100%;
+    border: 1.5px solid rgba(0,0,0,.18);
+    border-radius: var(--radius-sm);
+    background: rgba(255,255,255,.85);
+    color: var(--ink);
+    padding: 7px 8px;
+    text-align: center;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .f2 .note { border-color: rgba(255,255,255,.6); background: #fff; }
+  .note::placeholder { color: #9aa0a6; font-weight: 400; }
+  .note.invalid { border-color: var(--ink); background: #fff3b0; }
+
+  .block-foot {
+    margin-top: auto;
+    padding-top: 10px;
+    display: flex; justify-content: space-between; gap: 8px;
+    font-size: .88rem;
+    opacity: .85;
+    font-variant-numeric: tabular-nums;
+  }
+  .block-foot strong { font-weight: 700; }
+
+  .footnote { color: var(--muted); font-size: .92rem; max-width: 80ch; margin: 8px 0 0; }
+  .footnote b { color: var(--ink); }
+
+  /* ---------- Résultat ---------- */
+  .result {
+    position: sticky; top: calc(24px + env(safe-area-inset-top, 0px));
+    border: 2px solid var(--ink);
+    border-radius: var(--radius-lg);
+    padding: 22px;
+  }
+  .result h2 { font-size: 1rem; font-weight: 600; margin: 0 0 4px; }
+  .avg {
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: 5rem;
+    line-height: .95;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
+  }
+  .avg span { font-size: 1.6rem; letter-spacing: 0; color: var(--muted); font-weight: 500; }
+  .verdict {
+    display: inline-block;
+    margin: 12px 0 18px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: .95rem;
+    background: #eee;
+  }
+  .verdict.ok { background: var(--mint); }
+  .verdict.warn { background: #ffe38a; }
+  .verdict.ko { background: var(--coral); color: #fff; }
+
+  .scale { position: relative; margin: 4px 0 36px; }
+  .bar {
+    display: flex; height: 22px;
+    background: #f1f1f1;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .bar i { display: block; height: 100%; transition: width .35s ease; }
+  .bar .p1 { background: var(--mint-soft); }
+  .bar .p2 { background: var(--mint); }
+  .bar .f1 { background: #ffb3a8; }
+  .bar .f2 { background: var(--coral); }
+  .tick {
+    position: absolute; top: -4px; bottom: -18px;
+    border-left: 1.5px solid var(--ink);
+    font-size: .72rem; font-weight: 600;
+  }
+  .tick span { position: absolute; top: 100%; transform: translate(-50%, -2px); white-space: nowrap; }
+
+  .legend { display: grid; gap: 6px; margin: 0 0 18px; padding: 0; list-style: none; font-size: .88rem; }
+  .legend li { display: grid; grid-template-columns: 12px 1fr auto; gap: 8px; align-items: center; }
+  .legend .sw { width: 12px; height: 12px; border-radius: 3px; }
+  .legend .val { font-variant-numeric: tabular-nums; color: var(--muted); }
+
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+  .stat { background: #f5f5f5; border-radius: var(--radius-sm); padding: 10px 12px; }
+  .stat b { display: block; font-family: var(--display); font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+  .stat small { color: var(--muted); font-size: .8rem; }
+
+  .goal { border-top: 1.5px solid var(--line); padding-top: 16px; }
+  .goal label { font-weight: 600; font-size: .92rem; display: block; margin-bottom: 6px; }
+  .goal select {
+    width: 100%; padding: 8px 10px;
+    border: 1.5px solid var(--ink); border-radius: var(--radius-sm);
+    background: var(--paper);
+  }
+  .goal p { margin: 10px 0 0; font-size: .95rem; }
+  .goal p strong { font-family: var(--display); font-size: 1.15rem; }
+
+  .mini { display: none; }
+
+  @media (max-width: 1100px) {
+    .page { grid-template-columns: 1fr; padding: 32px 18px 110px; }
+    .result { position: static; }
+    .mini {
+      display: flex; justify-content: space-between; align-items: center; gap: 12px;
+      position: fixed; left: 0; right: 0; bottom: 0;
+      padding: 12px 18px calc(12px + env(safe-area-inset-bottom, 0px));
+      background: var(--ink); color: var(--paper);
+      z-index: 10;
+    }
+    .mini b { font-family: var(--display); font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+    .mini a { color: var(--paper); font-weight: 600; font-size: .92rem; }
+  }
+  @media (max-width: 760px) {
+    .cols { display: none; }
+    .level { grid-template-columns: 1fr; gap: 10px; }
+    .level + .level { margin-top: 18px; }
+    .level-name { border: none; padding: 0; }
+    .level-name h2 br { display: none; }
+    .block-title { display: block; }
+    .row { grid-template-columns: 1fr auto 70px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
+  @media print {
+    .toolbar, .mini { display: none !important; }
+    .page { grid-template-columns: 1fr; }
+    .result { position: static; }
+  }
+</style>
+</head>
+<body>
+<main class="page">
+  <header>
+    <h1>Simulez votre Bac STD2A.</h1>
+    <p class="lede">Saisissez vos notes sur 20. La moyenne se calcule au fur et à mesure, et vous voyez ce qu'il reste à obtenir sur les épreuves à venir.</p>
+  </header>
+
+  <div class="toolbar">
+    <button class="btn" id="editCoefs" type="button" aria-pressed="false">Modifier les coefficients</button>
+    <button class="btn" id="resetNotes" type="button">Effacer mes notes</button>
+    <button class="btn" id="resetCoefs" type="button" hidden>Rétablir les coefficients</button>
+    <span class="coef-total" id="coefTotal"></span>
+  </div>
+
+  <section class="board" id="board" aria-label="Épreuves du baccalauréat">
+    <div class="cols" aria-hidden="true">
+      <div></div>
+      <div class="col-head p">Épreuves ponctuelles (suivi continu)</div>
+      <div class="col-head f">Épreuves finales</div>
+    </div>
+    <!-- rempli en JavaScript -->
+  </section>
+
+  <aside class="result" id="result" aria-live="polite">
+    <h2>Moyenne générale</h2>
+    <div class="avg" id="avg">–<span> /20</span></div>
+    <div class="verdict" id="verdict">Aucune note saisie</div>
+
+    <div class="scale" aria-hidden="true">
+      <div class="bar" id="bar">
+        <i class="p1"></i><i class="f1"></i><i class="p2"></i><i class="f2"></i>
+      </div>
+      <div id="ticks"></div>
+    </div>
+
+    <ul class="legend" id="legend"></ul>
+
+    <div class="stats">
+      <div class="stat"><b id="points">0</b><small>points obtenus</small></div>
+      <div class="stat"><b id="progress">0 %</b><small>des coefficients saisis</small></div>
+    </div>
+
+    <div class="goal">
+      <label for="target">Mon objectif</label>
+      <select id="target">
+        <option value="10">Obtenir le bac (10/20)</option>
+        <option value="12">Mention Assez bien (12/20)</option>
+        <option value="14">Mention Bien (14/20)</option>
+        <option value="16">Mention Très bien (16/20)</option>
+        <option value="18">Félicitations du jury (18/20)</option>
+      </select>
+      <p id="goalText">Saisissez au moins une note pour voir ce qu'il vous reste à obtenir.</p>
+    </div>
+  </aside>
+</main>
+
+<div class="mini" aria-hidden="true">
+  <div><b id="miniAvg">–</b> /20</div>
+  <a href="#result">Voir le détail</a>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* =========================================================
+     COEFFICIENTS PAR DÉFAUT — à modifier ici si besoin
+     ========================================================= */
+  var BLOCKS = [
+    { id: "p1", level: "Première", kind: "Épreuves ponctuelles", subjects: [
+      { id: "p1_maths",  name: "Mathématiques",       coef: 3 },
+      { id: "p1_lva",    name: "LVA",                 coef: 3 },
+      { id: "p1_lvb",    name: "LVB",                 coef: 3 },
+      { id: "p1_emc",    name: "EMC",                 coef: 1 },
+      { id: "p1_hg",     name: "Histoire-Géographie", coef: 3 },
+      { id: "p1_pc",     name: "Physique-Chimie",     coef: 8 }
+    ]},
+    { id: "f1", level: "Première", kind: "Épreuves finales", subjects: [
+      { id: "f1_fr_oral",  name: "Français (oral)",  coef: 5 },
+      { id: "f1_fr_ecrit", name: "Français (écrit)", coef: 5 },
+      { id: "f1_maths",    name: "Mathématiques (anticipée)", coef: 2 }
+    ]},
+    { id: "p2", level: "Terminale", kind: "Épreuves ponctuelles", subjects: [
+      { id: "p2_hg",    name: "Histoire-Géographie", coef: 3 },
+      { id: "p2_eps",   name: "EPS",                 coef: 6 },
+      { id: "p2_etlv",  name: "LVA (dont ETLV)",           coef: 3 },
+      { id: "p2_lvb",   name: "Oral LVB",            coef: 3 },
+      { id: "p2_maths", name: "Mathématiques",       coef: 3 },
+      { id: "p2_emc",   name: "Oral EMC",            coef: 1 }
+    ]},
+    { id: "f2", level: "Terminale", kind: "Épreuves finales", subjects: [
+      { id: "f2_philo", name: "Philosophie",      coef: 4 },
+      { id: "f2_amd",   name: "Spécialité AMD",   coef: 16 },
+      { id: "f2_ccdma", name: "Spécialité CCDMA", coef: 16 },
+      { id: "f2_go",    name: "Grand Oral",       coef: 12 }
+    ]}
+  ];
+
+  var LABELS = {
+    p1: "Première, ponctuelles",
+    f1: "Première, finales",
+    p2: "Terminale, ponctuelles",
+    f2: "Terminale, finales"
+  };
+  var COLORS = { p1: "#c8f5e4", f1: "#ffb3a8", p2: "#4fe3b3", f2: "#ff4d3a" };
+  var STORAGE_KEY = "bellecour-simulateur-bac-v2";
+
+  /* ---------- État ---------- */
+  var defaults = {};
+  BLOCKS.forEach(function (b) { b.subjects.forEach(function (s) { defaults[s.id] = s.coef; }); });
+
+  var state = { coefs: Object.assign({}, defaults), notes: {}, target: 10 };
+  try {
+    var saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+    if (saved) {
+      if (saved.coefs) Object.keys(defaults).forEach(function (k) {
+        if (typeof saved.coefs[k] === "number") state.coefs[k] = saved.coefs[k];
+      });
+      if (saved.notes) state.notes = saved.notes;
+      if (saved.target) state.target = saved.target;
+    }
+  } catch (e) { /* stockage indisponible : on continue sans */ }
+
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  /* ---------- Utilitaires ---------- */
+  function fmt(n, d) {
+    if (d === undefined) d = 2;
+    return n.toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: d });
+  }
+  function parseNote(str) {
+    if (str === undefined || str === null) return null;
+    str = String(str).trim().replace(",", ".");
+    if (str === "") return null;
+    var n = Number(str);
+    if (!isFinite(n) || n < 0 || n > 20) return NaN;
+    return n;
+  }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+
+  /* ---------- Construction de la grille ---------- */
+  var board = document.getElementById("board");
+  var footRefs = {};
+
+  ["Première", "Terminale"].forEach(function (level) {
+    var wrap = el("div", "level");
+    var name = el("div", "level-name");
+    var h2 = el("h2");
+    h2.innerHTML = "Classe de<br> " + level;
+    name.appendChild(h2);
+    wrap.appendChild(name);
+
+    BLOCKS.filter(function (b) { return b.level === level; }).forEach(function (b) {
+      var block = el("div", "block " + b.id);
+      block.setAttribute("role", "group");
+      block.setAttribute("aria-label", LABELS[b.id]);
+      block.appendChild(el("p", "block-title", b.kind));
+
+      b.subjects.forEach(function (s) {
+        var row = el("div", "row");
+        var inputId = "note_" + s.id;
+
+        var lab = el("label", null, s.name);
+        lab.setAttribute("for", inputId);
+
+        var coef = el("span", "coef");
+        coef.dataset.id = s.id;
+
+        var note = el("input", "note");
+        note.id = inputId;
+        note.type = "text";
+        note.inputMode = "decimal";
+        note.autocomplete = "off";
+        note.placeholder = "/20";
+        note.setAttribute("aria-label", s.name + " : note sur 20");
+        if (state.notes[s.id] !== undefined) note.value = state.notes[s.id];
+
+        note.addEventListener("input", function () {
+          var v = parseNote(note.value);
+          note.classList.toggle("invalid", Number.isNaN(v));
+          if (v === null || Number.isNaN(v)) delete state.notes[s.id];
+          else state.notes[s.id] = note.value.trim();
+          save(); compute();
+        });
+
+        row.appendChild(lab); row.appendChild(coef); row.appendChild(note);
+        block.appendChild(row);
+      });
+
+      var foot = el("div", "block-foot");
+      var fa = el("span"); var fb = el("span");
+      foot.appendChild(fa); foot.appendChild(fb);
+      block.appendChild(foot);
+      footRefs[b.id] = { avg: fa, pts: fb };
+
+      wrap.appendChild(block);
+    });
+    board.appendChild(wrap);
+  });
+
+  var footnote = el("p", "footnote");
+  footnote.id = "footnote";
+  board.appendChild(footnote);
+
+  /* ---------- Coefficients (affichage / édition) ---------- */
+  var editing = false;
+  function renderCoefs() {
+    document.querySelectorAll(".coef").forEach(function (c) {
+      var id = c.dataset.id;
+      c.textContent = "";
+      if (editing) {
+        c.appendChild(document.createTextNode("coef "));
+        var inp = el("input");
+        inp.type = "number"; inp.min = "0"; inp.step = "0.5";
+        inp.value = state.coefs[id];
+        inp.setAttribute("aria-label", "Coefficient");
+        inp.addEventListener("input", function () {
+          var v = Number(String(inp.value).replace(",", "."));
+          if (isFinite(v) && v >= 0) { state.coefs[id] = v; save(); compute(); }
+        });
+        c.appendChild(inp);
+      } else {
+        c.textContent = "coef " + fmt(state.coefs[id]);
+      }
+    });
+    board.classList.toggle("editing", editing);
+  }
+
+  document.getElementById("editCoefs").addEventListener("click", function () {
+    editing = !editing;
+    this.setAttribute("aria-pressed", String(editing));
+    this.textContent = editing ? "Terminer" : "Modifier les coefficients";
+    document.getElementById("resetCoefs").hidden = !editing;
+    renderCoefs();
+  });
+  document.getElementById("resetCoefs").addEventListener("click", function () {
+    state.coefs = Object.assign({}, defaults);
+    save(); renderCoefs(); compute();
+  });
+  document.getElementById("resetNotes").addEventListener("click", function () {
+    if (!confirm("Effacer toutes les notes saisies ?")) return;
+    state.notes = {};
+    document.querySelectorAll(".note").forEach(function (n) { n.value = ""; n.classList.remove("invalid"); });
+    save(); compute();
+  });
+
+  var targetSel = document.getElementById("target");
+  targetSel.value = String(state.target);
+  targetSel.addEventListener("change", function () {
+    state.target = Number(targetSel.value); save(); compute();
+  });
+
+  /* ---------- Légende + graduations ---------- */
+  var legend = document.getElementById("legend");
+  var legendVals = {};
+  ["p1", "f1", "p2", "f2"].forEach(function (id) {
+    var li = el("li");
+    var sw = el("span", "sw"); sw.style.background = COLORS[id];
+    var v = el("span", "val", "–");
+    li.appendChild(sw); li.appendChild(el("span", null, LABELS[id])); li.appendChild(v);
+    legend.appendChild(li);
+    legendVals[id] = v;
+  });
+  var ticks = document.getElementById("ticks");
+  [8, 10, 12, 14, 16].forEach(function (t) {
+    var tk = el("div", "tick");
+    tk.style.left = (t / 20 * 100) + "%";
+    tk.appendChild(el("span", null, String(t)));
+    ticks.appendChild(tk);
+  });
+
+  /* ---------- Calcul ---------- */
+  function verdictFor(avg) {
+    if (avg >= 18) return ["Admis, Très bien avec félicitations", "ok"];
+    if (avg >= 16) return ["Admis, mention Très bien", "ok"];
+    if (avg >= 14) return ["Admis, mention Bien", "ok"];
+    if (avg >= 12) return ["Admis, mention Assez bien", "ok"];
+    if (avg >= 10) return ["Admis", "ok"];
+    if (avg >= 8)  return ["Oral de rattrapage", "warn"];
+    return ["Non admis", "ko"];
+  }
+
+  function compute() {
+    var totalPts = 0, doneCoef = 0, allCoef = 0, missingCount = 0;
+    var perBlock = {};
+
+    BLOCKS.forEach(function (b) {
+      var pts = 0, coef = 0, all = 0;
+      b.subjects.forEach(function (s) {
+        var c = state.coefs[s.id] || 0;
+        all += c;
+        var n = parseNote(state.notes[s.id]);
+        if (n !== null && !Number.isNaN(n)) { pts += n * c; coef += c; }
+        else if (c > 0) missingCount++;
+      });
+      perBlock[b.id] = { pts: pts, coef: coef, all: all };
+      totalPts += pts; doneCoef += coef; allCoef += all;
+
+      var f = footRefs[b.id];
+      if (coef > 0) {
+        f.avg.innerHTML = "Moyenne <strong>" + fmt(pts / coef) + "</strong>";
+        f.pts.textContent = fmt(pts, 1) + " / " + fmt(all * 20, 1) + " pts";
+      } else {
+        f.avg.textContent = "Coefficients : " + fmt(all);
+        f.pts.textContent = "";
+      }
+    });
+
+    document.getElementById("coefTotal").textContent =
+      "Total des coefficients : " + fmt(allCoef);
+
+    var spe = (state.coefs.f2_amd || 0) + (state.coefs.f2_ccdma || 0);
+    var go = state.coefs.f2_go || 0;
+    document.getElementById("footnote").innerHTML =
+      "<b>Les 2 spécialités de Terminale (AMD + CCDMA) pèsent à elles seules " +
+      fmt(spe / allCoef * 100, 0) + " % de la note finale</b>, auxquels s'ajoutent " +
+      fmt(go / allCoef * 100, 0) + " % pour le Grand Oral. Simulation indicative : seul le jury du baccalauréat délivre les résultats officiels.";
+
+    var avgEl = document.getElementById("avg");
+    var verdictEl = document.getElementById("verdict");
+    var miniAvg = document.getElementById("miniAvg");
+    var bars = document.querySelectorAll("#bar i");
+
+    if (doneCoef === 0) {
+      avgEl.innerHTML = "–<span> /20</span>";
+      miniAvg.textContent = "–";
+      verdictEl.textContent = "Aucune note saisie";
+      verdictEl.className = "verdict";
+      bars.forEach(function (i) { i.style.width = "0"; });
+      Object.keys(legendVals).forEach(function (k) { legendVals[k].textContent = "–"; });
+    } else {
+      var avg = totalPts / doneCoef;
+      avgEl.innerHTML = fmt(avg) + "<span> /20</span>";
+      miniAvg.textContent = fmt(avg);
+      var v = verdictFor(avg);
+      var provisional = doneCoef < allCoef;
+      verdictEl.textContent = provisional ? "Pour l'instant : " + v[0].toLowerCase() : v[0];
+      verdictEl.className = "verdict " + v[1];
+
+      ["p1", "f1", "p2", "f2"].forEach(function (id, idx) {
+        // part de chaque bloc dans la moyenne actuelle (sur 20)
+        var contrib = perBlock[id].pts / doneCoef;
+        bars[idx].style.width = (contrib / 20 * 100) + "%";
+        legendVals[id].textContent = perBlock[id].coef > 0 ? "+" + fmt(contrib) + " pt" : "–";
+      });
+    }
+
+    document.getElementById("points").textContent = fmt(totalPts, 1) + " / " + fmt(allCoef * 20, 0);
+    document.getElementById("progress").textContent =
+      (allCoef ? fmt(doneCoef / allCoef * 100, 0) : 0) + " %";
+
+    /* Objectif : moyenne à obtenir sur les épreuves restantes */
+    var goalText = document.getElementById("goalText");
+    var target = state.target;
+    var missingCoef = allCoef - doneCoef;
+    if (doneCoef === 0) {
+      goalText.textContent = "Saisissez au moins une note pour voir ce qu'il vous reste à obtenir.";
+    } else if (missingCoef <= 0) {
+      var finalAvg = totalPts / doneCoef;
+      goalText.textContent = finalAvg >= target
+        ? "Objectif atteint avec toutes les notes saisies."
+        : "Objectif non atteint : il manque " + fmt((target * allCoef - totalPts), 1) + " points.";
+    } else {
+      var needed = (target * allCoef - totalPts) / missingCoef;
+      if (needed <= 0) {
+        goalText.innerHTML = "Objectif déjà assuré, quelles que soient les " + missingCount + " notes restantes.";
+      } else if (needed > 20) {
+        goalText.innerHTML = "Objectif hors d'atteinte : il faudrait plus de 20/20 de moyenne sur les épreuves restantes.";
+      } else {
+        goalText.innerHTML = "Il faut <strong>" + fmt(needed) + "/20</strong> de moyenne sur les " +
+          missingCount + " épreuve" + (missingCount > 1 ? "s" : "") + " restante" + (missingCount > 1 ? "s" : "") +
+          " (coefficient " + fmt(missingCoef) + ").";
+      }
+    }
+  }
+
+  renderCoefs();
+  compute();
+})();
+</script>
+</body>
+</html>
